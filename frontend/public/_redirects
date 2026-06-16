@@ -1,0 +1,7 @@
+# Render Static Site — правило для React Router (опционально, если вернёте BrowserRouter)
+# Dashboard → bronix-frontend → Redirects/Rewrites → Add Rule:
+#   Source: /*
+#   Destination: /index.html
+#   Action: Rewrite
+
+/*    /index.html   200

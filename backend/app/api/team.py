@@ -1,8 +1,11 @@
+import base64
+from io import BytesIO
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from PIL import Image
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
@@ -21,6 +24,7 @@ ALLOWED_IMAGE_TYPES = {
     "image/gif": ".gif",
 }
 MAX_PHOTO_SIZE = 5 * 1024 * 1024
+MAX_STORED_PHOTO_BYTES = 180_000
 
 
 def _user_to_team_member(user: User) -> TeamMemberResponse:
@@ -62,6 +66,27 @@ def _remove_local_photo(photo_url: str | None) -> None:
     file_path = UPLOADS_ROOT / Path(photo_url).name
     if file_path.is_file():
         file_path.unlink(missing_ok=True)
+
+
+def _encode_avatar_data_uri(content: bytes) -> str:
+    image = Image.open(BytesIO(content))
+    if image.mode not in ("RGB", "L"):
+        image = image.convert("RGB")
+
+    image.thumbnail((400, 400), Image.Resampling.LANCZOS)
+
+    quality = 85
+    compressed = b""
+    while quality >= 50:
+        buffer = BytesIO()
+        image.save(buffer, format="JPEG", quality=quality, optimize=True)
+        compressed = buffer.getvalue()
+        if len(compressed) <= MAX_STORED_PHOTO_BYTES:
+            break
+        quality -= 10
+
+    encoded = base64.b64encode(compressed).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
 
 
 @router.get("", response_model=list[TeamMemberResponse])
@@ -140,14 +165,16 @@ async def upload_team_member_photo(
             detail="Photo must be 5 MB or smaller",
         )
 
-    UPLOADS_ROOT.mkdir(parents=True, exist_ok=True)
-    extension = ALLOWED_IMAGE_TYPES[content_type]
-    filename = f"user_{user.id}_{uuid4().hex}{extension}"
-    file_path = UPLOADS_ROOT / filename
-    file_path.write_bytes(content)
+    try:
+        photo_data_uri = _encode_avatar_data_uri(content)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid image file",
+        ) from exc
 
     _remove_local_photo(user.photo_url)
-    user.photo_url = f"/uploads/avatars/{filename}"
+    user.photo_url = photo_data_uri
 
     db.commit()
     db.refresh(user)

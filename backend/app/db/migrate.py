@@ -94,8 +94,26 @@ def migrate_leads_client_cascade(engine: Engine) -> None:
         )
 
 
+def migrate_photo_url_to_text(engine: Engine) -> None:
+    inspector = inspect(engine)
+    if "users" not in inspector.get_table_names():
+        return
+
+    columns = {column["name"]: column for column in inspector.get_columns("users")}
+    if "photo_url" not in columns:
+        return
+
+    column_type = str(columns["photo_url"]["type"]).upper()
+    if "TEXT" in column_type:
+        return
+
+    with engine.begin() as conn:
+        conn.execute(text("ALTER TABLE users ALTER COLUMN photo_url TYPE TEXT"))
+
+
 def run_migrations(engine: Engine) -> None:
     migrate_user_profile_columns(engine)
     migrate_lead_assigned_column(engine)
     migrate_lead_schedule_columns(engine)
     migrate_leads_client_cascade(engine)
+    migrate_photo_url_to_text(engine)

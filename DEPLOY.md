@@ -1,10 +1,19 @@
 # Деплой CRM Diplom для защиты диплома
 
-Схема: **Backend + PostgreSQL** на Render (или Railway), **Frontend** на Vercel.
+Схема: **Backend + PostgreSQL** на Render, **Frontend** на Render Static Site или Vercel.
 
 ```
-Браузер → Vercel (React) → Render/Railway (FastAPI) → PostgreSQL
+Браузер → Frontend (Render/Vercel) → Backend API (Render) → PostgreSQL
 ```
+
+**Два разных URL — не путайте:**
+
+| Сервис | URL | Что открывать |
+|--------|-----|---------------|
+| Backend (API) | `https://bronix-crm.onrender.com` | Только для проверки: `/health`, `/docs` |
+| **Frontend (сайт)** | `https://bronix-frontend.onrender.com` | **Это ваш CRM — открывайте его** |
+
+Если на backend видите `{"detail":"Not Found"}` на главной — это нормально для старой версии; после обновления будет подсказка со ссылкой на frontend.
 
 ---
 
@@ -87,7 +96,24 @@
 
 ---
 
-## 3. Frontend на Vercel
+## 3. Frontend на Render (Static Site)
+
+1. **New → Static Site** → репозиторий `bronix-crm`.
+2. **Root Directory:** `frontend`
+3. **Build Command:** `npm install && npm run build`
+4. **Publish Directory:** `dist`
+5. **Environment Variables:**
+   ```
+   VITE_API_URL=https://YOUR-BACKEND.onrender.com
+   ```
+6. Deploy → скопируйте URL (например `https://bronix-frontend.onrender.com`).
+7. В backend → **Environment** → `FRONTEND_URL` = этот URL → **Manual Deploy**.
+
+Файл `frontend/public/_redirects` обеспечивает работу React Router при обновлении страницы.
+
+---
+
+## 4. Frontend на Vercel (альтернатива)
 
 1. [vercel.com](https://vercel.com) → **Add New Project** → импорт GitHub-репозитория.
 2. **Root Directory**: `frontend`
@@ -139,9 +165,49 @@ npm run preview
 - [ ] Регистрация и вход работают
 - [ ] CRUD клиентов и заявок
 - [ ] Dashboard с аналитикой
-- [ ] `FRONTEND_URL` на backend = точный URL Vercel
-- [ ] `VITE_API_URL` на Vercel = точный URL backend
+- [ ] Обновление страницы (F5) на `/clients`, `/leads`, `/team` — не 404
+- [ ] Фото команды сохраняются после перезагрузки
+- [ ] `FRONTEND_URL` на backend = `https://bronix-frontend.onrender.com`
+- [ ] `VITE_API_URL` на frontend = `https://bronix-crm.onrender.com`
 - [ ] JWT_SECRET не `change_me`
+
+---
+
+## 7. Защита диплома: медленный старт и что открывать
+
+### Нужно ли держать GitHub и Render открытыми?
+
+**Нет.** Открытые вкладки GitHub/Render не ускоряют сайт.
+
+Медленная загрузка — это **cold start** бесплатного Render: backend «засыпает» после ~15 мин без запросов. Первый заход может занять **30–60 секунд**.
+
+**Перед защитой (за 2–3 минуты до выступления):**
+
+1. Откройте в браузере: `https://bronix-crm.onrender.com/health` — дождитесь `{"status":"ok"}`
+2. Затем откройте сайт: **https://bronix-frontend.onrender.com**
+3. Войдите в аккаунт заранее
+
+**Какие URL использовать:**
+
+| URL | Назначение |
+|-----|------------|
+| `https://bronix-frontend.onrender.com` | **Сайт CRM — показывайте комиссии** |
+| `https://bronix-crm.onrender.com` | Только API (не главная страница сайта) |
+
+### Обновление страницы (Not Found)
+
+После деплоя с `HashRouter` адрес будет вида `https://bronix-frontend.onrender.com/#/clients`.  
+**Обновление (F5) на любой странице должно работать.**
+
+Опционально в Render Dashboard → bronix-frontend → **Redirects/Rewrites**:
+- Source: `/*`
+- Destination: `/index.html`
+- Action: **Rewrite**
+
+### Фото команды
+
+Фото хранятся **в PostgreSQL** (не на диске сервера), поэтому сохраняются после redeploy.  
+После обновления backend **загрузите фото заново** — старые могли пропасть из-за ephemeral disk.
 
 ---
 
