@@ -1,172 +1,72 @@
-# CRM Diplom (Fullstack)
+# Bronix CRM
 
-Простой каркас fullstack CRM-системы для дипломной работы.
+A full-stack Customer Relationship Management (CRM) web application designed to streamline client management, service requests, and team workflows. Built with a clean, responsive interface and real-time analytics.
 
-## Стек
+## Key Features
 
-- Frontend: React + Vite + TypeScript + Tailwind CSS + React Router + Axios
-- Backend: FastAPI + SQLAlchemy + JWT (каркас) 
-- Database: PostgreSQL
+- **Analytics Dashboard:** Real-time overview of total clients, request statuses (*New*, *In Progress*, *Completed*, *Canceled*), status distribution charts, and employee performance metrics.
+- **Client Management:** Full CRUD operations for client records, instant search by name, phone, or email, detailed notes/addresses, and **one-click Excel export**.
+- **Request & Task Tracking:** Assign service requests to specific team members, set execution dates and deadlines, manage statuses, and track descriptions.
+- **Team & Role-Based Access:** Role-based permissions (`Admin` / `Manager`), interactive employee profile cards with avatars, profile editing, and team directory search/export.
+- **Secure Authentication:** JWT-based user authentication and protected API routes.
 
-## Структура
+## Tech Stack
+
+- **Frontend:** React, TypeScript, Vite, Tailwind CSS, React Router, Axios
+- **Backend:** Python, FastAPI, SQLAlchemy, Pydantic, JWT Authentication
+- **Database:** PostgreSQL
+
+## Interface Preview
+
+### Analytics Dashboard
+![Dashboard](screenshots/dashboard.png)
+
+### Client Management & Excel Export
+![Clients](screenshots/clients.png)
+
+### Service Requests & Deadlines
+![Requests](screenshots/requests.png)
+
+### Team & Role Management
+![Team](screenshots/team.png)
+
+## Project Structure
 
 ```text
-crm-diplom/
-  backend/
-    app/
-      api/
-      core/
-      db/
-      models/
-      schemas/
-    .env.example
-    main.py
-    database.py
-    requirements.txt
-  frontend/
-    src/
-      api/
-      routes/
-    .env.example
-    index.html
-    package.json
-    postcss.config.js
-    tailwind.config.js
-    tsconfig.json
-    vite.config.ts
-```
+bronix-crm/
+├── backend/
+│   ├── app/
+│   │   ├── api/        # REST API endpoints
+│   │   ├── core/       # Config & JWT security
+│   │   ├── db/         # Database session & base setup
+│   │   ├── models/     # SQLAlchemy ORM models
+│   │   └── schemas/    # Pydantic validation schemas
+│   ├── main.py         # FastAPI entry point
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── api/        # Axios API client
+│   │   └── routes/     # Application pages & protected routes
+│   ├── package.json
+│   └── vite.config.ts
+└── screenshots/        # UI preview images
 
-## Запуск PostgreSQL локально (без Docker)
 
-1) Установите PostgreSQL и создайте БД:
-- database: `crm_diplom`
-- user/password: любые (по умолчанию в примере `postgres/postgres`)
 
-2) Обновите строку подключения:
-- `backend/.env` (создайте из `backend/.env.example`)
+Local Setup
+Database: Create a PostgreSQL database (e.g., crm_diplom) and configure backend/.env based on backend/.env.example.
 
-Пример:
+Backend:
 
-```env
-DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/crm_diplom
-JWT_SECRET=change_me_in_real_env
-JWT_ALGORITHM=HS256
-```
-
-## Запуск backend
-
-```bash
+Bash
 cd backend
 python -m venv .venv
-
-# Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-
+.venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload
-```
+uvicorn app.main:app --reload
+Frontend:
 
-Проверка: `GET http://127.0.0.1:8000/health`
-
-Документация API: `http://127.0.0.1:8000/docs`
-
-## Авторизация (JWT)
-
-При старте backend автоматически:
-- создаёт таблицы в PostgreSQL;
-- добавляет роли `admin` и `manager`.
-
-### Эндпоинты
-
-| Метод | URL | Доступ |
-|-------|-----|--------|
-| POST | `/auth/register` | публичный |
-| POST | `/auth/login` | публичный |
-| GET | `/auth/me` | JWT (Bearer) |
-| GET | `/api/profile` | JWT + middleware |
-| GET | `/api/manager/dashboard` | роль admin или manager |
-| GET | `/api/admin/dashboard` | только admin |
-
-### Пример регистрации
-
-```json
-POST /auth/register
-{
-  "email": "manager@crm.local",
-  "password": "secret12",
-  "full_name": "Иван Менеджер",
-  "role": "manager"
-}
-```
-
-### Пример логина
-
-```json
-POST /auth/login
-{
-  "email": "manager@crm.local",
-  "password": "secret12"
-}
-```
-
-Ответ:
-
-```json
-{
-  "access_token": "...",
-  "token_type": "bearer"
-}
-```
-
-### Защищённые запросы
-
-Заголовок:
-
-```http
-Authorization: Bearer <access_token>
-```
-
-## Клиенты (CRUD)
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | `/api/clients?search=текст` | Список + поиск |
-| GET | `/api/clients/{id}` | Один клиент |
-| POST | `/api/clients` | Создание |
-| PUT | `/api/clients/{id}` | Редактирование |
-| DELETE | `/api/clients/{id}` | Удаление |
-
-На фронтенде: `http://localhost:5173/clients` (нужен вход).
-
-## Заявки (CRUD)
-
-| Метод | URL | Описание |
-|-------|-----|----------|
-| GET | `/api/leads?search=&status=&client_id=` | Список + фильтры |
-| GET | `/api/leads/{id}` | Одна заявка |
-| POST | `/api/leads` | Создание |
-| PUT | `/api/leads/{id}` | Редактирование |
-| DELETE | `/api/leads/{id}` | Удаление |
-
-Статусы: `new`, `in_progress`, `completed`, `cancelled`.
-
-На фронтенде: `http://localhost:5173/leads` (нужен вход и хотя бы один клиент).
-
-## Запуск frontend
-
-```bash
+Bash
 cd frontend
 npm install
 npm run dev
-```
-
-Откройте `http://localhost:5173`:
-- **Регистрация** — `/register`
-- **Вход** — `/login`
-- После входа откроется главная страница с профилем
-
-JWT сохраняется в `localStorage` и автоматически отправляется в запросах.
-
-Если нужно — задайте URL бекенда:
-- `frontend/.env` (создайте из `frontend/.env.example`)
-
